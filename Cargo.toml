@@ -5,7 +5,8 @@ authors = ["Jason Peacock <jason@jasonpeacock.com>"]
 
 [dependencies]
 docopt = "0.8.0"
-i2cdev = "0.3.1"
+#i2cdev = "0.3.1"
+i2cdev = { git = 'https://github.com/rust-embedded/rust-i2cdev' }
 num-integer = "0.1.34"
 serde = "1.0.8"
 serde_derive = "1.0.8"
@@ -13,3 +14,7 @@ slog = "2.0.6"
 slog-async = "2.0.1"
 slog-stdlog = "3.0.2"
 slog-term = "2.0.1"
+
+#[patch.crates-io]
+#i2cdev = { git = 'https://github.com/rust-embedded/rust-i2cdev' }
+

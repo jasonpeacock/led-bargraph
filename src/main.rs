@@ -8,11 +8,14 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
+extern crate i2cdev;
 extern crate led_bargraph;
 
 use docopt::Docopt;
 
 use slog::Drain;
+
+use i2cdev::linux::{LinuxI2CDevice};
 
 use led_bargraph::bargraph::Bargraph;
 
@@ -67,10 +70,11 @@ fn main() {
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));
 
+    let device_i2c = LinuxI2CDevice::new(args.flag_i2c_path, args.flag_i2c_address).unwrap();
+
     let mut bargraph = Bargraph::new(bargraph_logger,
                                      args.flag_bargraph_size,
-                                     args.flag_i2c_path,
-                                     args.flag_i2c_address)
+                                     device_i2c)
             .expect("Could not create bargraph");
 
     if args.cmd_clear {

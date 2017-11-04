@@ -1,3 +1,7 @@
+use std::error;
+use std::fmt;
+use std::result;
+
 use i2cdev::core::*;
 use i2cdev::linux::{LinuxI2CDevice, LinuxI2CError};
 
@@ -6,6 +10,41 @@ use slog::Logger;
 use slog_stdlog::StdLog;
 
 use num_integer::Integer;
+
+type Result<T> = result::Result<T, HT16K33Error>;
+
+#[derive(Debug)]
+pub enum HT16K33Error {
+    Device(LinuxI2CError),
+}
+
+impl fmt::Display for HT16K33Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            HT16K33Error::Device(ref err) => write!(f, "Device error: {}", err),
+        }
+    }
+}
+
+impl error::Error for HT16K33Error {
+    fn description(&self) -> &str {
+        match *self {
+            HT16K33Error::Device(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            HT16K33Error::Device(ref err) => Some(err),
+        }
+    }
+}
+
+impl From<LinuxI2CError> for HT16K33Error {
+    fn from(err: LinuxI2CError) -> HT16K33Error {
+        HT16K33Error::Device(err)
+    }
+}
 
 pub struct HT16K33 {
     device: LinuxI2CDevice,
@@ -37,7 +76,7 @@ pub const COLOR_YELLOW: u8 = 3;
 /// which is used in the Adafruit Bi-Color 24-bar LED Bargraph I2C
 /// backpack.
 impl HT16K33 {
-    /// Create an HT16K33 driver for the LED matrix device on the specified I2C address.
+    /// Create an HT16K33 driver for the LED matrix device with the specified I2C device.
     ///
     /// `logger = None`, will log to the `slog-stdlog` drain. This makes the library
     /// effectively work the same as if it was just using `log` intead of `slog`.
@@ -45,17 +84,14 @@ impl HT16K33 {
     /// `Into` trick allows passing `Logger` directly, without the `Some` part.
     /// See http://xion.io/post/code/rust-optional-args.html
     pub fn new<L: Into<Option<Logger>>>(logger: L,
-                                        path: String,
-                                        address: u16)
-                                        -> Result<HT16K33, LinuxI2CError> {
+                                        device_i2c: LinuxI2CDevice)
+                                        -> Result<HT16K33> {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
-        debug!(logger, "Constructing HT16K33 driver"; "path" => &path, "address" => address);
-
-        let dev = LinuxI2CDevice::new(path, address)?;
+        debug!(logger, "Constructing HT16K33 driver");
 
         let mut ht16k33 = HT16K33 {
-            device: dev,
+            device: device_i2c,
             buffer: [0; 16],
             logger: logger,
         };
@@ -73,7 +109,7 @@ impl HT16K33 {
     /// * Enable clock oscillator
     /// * Turn off any blinking
     /// * Maximum (15) brightness
-    fn init(&mut self) -> Result<(), LinuxI2CError> {
+    fn init(&mut self) -> Result<()> {
         // Turn on the oscillator.
         self.device
             .smbus_write_block_data(SYSTEM_SETUP | OSCILLATOR, &[0; 0])?;
@@ -95,21 +131,25 @@ impl HT16K33 {
     /// BLINK_2HZ
     /// BLINK_1HZ
     /// BLINK_HALFHZ
-    pub fn set_blink(&mut self, frequency: u8) -> Result<(), LinuxI2CError> {
+    pub fn set_blink(&mut self, frequency: u8) -> Result<()> {
         // TODO Validate 'frequency' parameter.
         self.device
-            .smbus_write_block_data(BLINK_CMD | BLINK_DISPLAYON | frequency, &[0; 0])
+            .smbus_write_block_data(BLINK_CMD | BLINK_DISPLAYON | frequency, &[0; 0])?;
+
+        Ok(())
     }
 
     /// Set brightness of entire display to specified value (16 levels, from 0 to 15).
-    pub fn set_brightness(&mut self, brightness: u8) -> Result<(), LinuxI2CError> {
+    pub fn set_brightness(&mut self, brightness: u8) -> Result<()> {
         // TODO Validate 'brightness' parameter.
         self.device
-            .smbus_write_block_data(BRIGHTNESS_CMD | brightness, &[0; 0])
+            .smbus_write_block_data(BRIGHTNESS_CMD | brightness, &[0; 0])?;
+
+        Ok(())
     }
 
     /// Write display buffer to display hardware.
-    pub fn write_display(&mut self) -> Result<(), LinuxI2CError> {
+    pub fn write_display(&mut self) -> Result<()> {
         for value in 0..self.buffer.len() {
             self.device
                 .smbus_write_byte_data(value as u8, self.buffer[value])?;

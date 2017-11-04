@@ -1,10 +1,49 @@
-use i2cdev::linux::LinuxI2CError;
+use std::error;
+use std::fmt;
+use std::result;
 
 use slog::Drain;
 use slog::Logger;
 use slog_stdlog::StdLog;
 
+use i2cdev::linux::{LinuxI2CDevice};
+
 mod ht16k33;
+
+type Result<T> = result::Result<T, BargraphError>;
+
+#[derive(Debug)]
+pub enum BargraphError {
+    HT16K33(ht16k33::HT16K33Error),
+}
+
+impl fmt::Display for BargraphError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            BargraphError::HT16K33(ref err) => write!(f, "Device error: {}", err),
+        }
+    }
+}
+
+impl error::Error for BargraphError {
+    fn description(&self) -> &str {
+        match *self {
+            BargraphError::HT16K33(ref err) => err.description(),
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            BargraphError::HT16K33(ref err) => Some(err),
+        }
+    }
+}
+
+impl From<ht16k33::HT16K33Error> for BargraphError {
+    fn from(err: ht16k33::HT16K33Error) -> BargraphError {
+        BargraphError::HT16K33(err)
+    }
+}
 
 pub struct Bargraph {
     pub device: ht16k33::HT16K33,
@@ -21,17 +60,15 @@ impl Bargraph {
     /// See http://xion.io/post/code/rust-optional-args.html
     pub fn new<L: Into<Option<Logger>>>(logger: L,
                                         size: u8,
-                                        path: String,
-                                        address: u16)
-                                        -> Result<Bargraph, LinuxI2CError> {
+                                        device_i2c: LinuxI2CDevice)
+                                        -> Result<Bargraph> {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
-        debug!(logger, "Constructing Bargraph";
-               "size" => size, "path" => &path, "address" => address);
+        debug!(logger, "Constructing Bargraph"; "size" => size);
 
         let device_logger = logger.new(o!("mod" => "HT16K33"));
 
-        let device = ht16k33::HT16K33::new(device_logger, path, address)
+        let device = ht16k33::HT16K33::new(device_logger, device_i2c)
             .expect("Could not create HT16K33 device");
 
         let bargraph = Bargraph {
@@ -43,7 +80,7 @@ impl Bargraph {
         Ok(bargraph)
     }
 
-    pub fn clear(&mut self) -> Result<(), LinuxI2CError> {
+    pub fn clear(&mut self) -> Result<()> {
         self.device.clear();
         self.device.write_display()?;
 
@@ -51,7 +88,7 @@ impl Bargraph {
     }
 
     /// Update the display, showing up to `value` blocks filled of `range` total blocks.
-    pub fn update(&mut self, value: &u8, range: &u8) -> Result<(), LinuxI2CError> {
+    pub fn update(&mut self, value: &u8, range: &u8) -> Result<()> {
         self.device.clear();
 
         for block in 1..(*range + 1) {
@@ -67,12 +104,14 @@ impl Bargraph {
         Ok(())
     }
 
-    pub fn set_blink(&mut self, enabled: &bool) -> Result<(), LinuxI2CError> {
+    pub fn set_blink(&mut self, enabled: &bool) -> Result<()> {
         if *enabled {
-            self.device.set_blink(ht16k33::BLINK_2HZ)
+            self.device.set_blink(ht16k33::BLINK_2HZ)?;
         } else {
-            self.device.set_blink(ht16k33::BLINK_OFF)
+            self.device.set_blink(ht16k33::BLINK_OFF)?;
         }
+
+        Ok(())
     }
 
     /// Fill in a "block" on the bargraph.

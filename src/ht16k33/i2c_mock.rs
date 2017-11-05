@@ -1,5 +1,4 @@
-//
-// Copied from:
+// Copied and lightly modified from:
 // https://github.com/rust-embedded/rust-i2cdev/blob/master/src/mock.rs
 //
 // Copyright 2015, Paul Osborne <osbpau@gmail.com>

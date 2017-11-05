@@ -15,13 +15,14 @@ use docopt::Docopt;
 
 use slog::Drain;
 
+use led_bargraph::ht16k33::HT16K33;
+use led_bargraph::bargraph::Bargraph;
+
 #[cfg(any(target_os = "linux", target_os = "android"))]
 use i2cdev::linux::LinuxI2CDevice;
 
 #[cfg(not(any(target_os = "linux", target_os = "android")))]
-use led_bargraph::mock::MockI2CDevice;
-
-use led_bargraph::bargraph::Bargraph;
+use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
 
 // Docopts: https://github.com/docopt/docopt.rs
 const USAGE: &'static str = "

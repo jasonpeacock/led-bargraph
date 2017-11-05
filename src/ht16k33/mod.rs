@@ -9,6 +9,8 @@ use slog_stdlog::StdLog;
 
 use num_integer::Integer;
 
+pub mod i2c_mock;
+
 #[derive(Debug)]
 pub enum HT16K33Error<T: I2CDevice> {
     Device(T::Error),

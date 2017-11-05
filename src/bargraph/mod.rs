@@ -7,7 +7,7 @@ use slog_stdlog::StdLog;
 
 use i2cdev::core::I2CDevice;
 
-mod ht16k33;
+use ht16k33;
 
 //#[derive(Debug)]
 pub enum BargraphError<T: I2CDevice> {

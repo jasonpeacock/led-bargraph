@@ -73,17 +73,19 @@ fn main() {
 
     debug!(logger, "{:?}", args);
 
-    let bargraph_logger = logger.new(o!("mod" => "bargraph"));
-
     #[cfg(any(target_os = "linux", target_os = "android"))]
-    let device_i2c = LinuxI2CDevice::new(args.flag_i2c_path, args.flag_i2c_address).unwrap();
+    let i2c_device = LinuxI2CDevice::new(args.flag_i2c_path, args.flag_i2c_address).unwrap();
 
     #[cfg(not(any(target_os = "linux", target_os = "android")))]
-    let device_i2c = MockI2CDevice::new();
+    let i2c_device = MockI2CDevice::new();
 
+    let device_logger = logger.new(o!("mod" => "HT16K33"));
+    let device = HT16K33::new(device_logger, i2c_device).unwrap();
+
+    let bargraph_logger = logger.new(o!("mod" => "bargraph"));
     let mut bargraph = Bargraph::new(bargraph_logger,
                                      args.flag_bargraph_size,
-                                     device_i2c)
+                                     device)
             .expect("Could not create bargraph");
 
     if args.cmd_clear {

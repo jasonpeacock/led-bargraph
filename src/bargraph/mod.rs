@@ -9,7 +9,6 @@ use i2cdev::core::I2CDevice;
 
 use ht16k33;
 
-//#[derive(Debug)]
 pub enum BargraphError<T: I2CDevice> {
     HT16K33(ht16k33::HT16K33Error<T>),
     Error,
@@ -61,15 +60,11 @@ impl<T> Bargraph<T> where T: I2CDevice {
     /// See http://xion.io/post/code/rust-optional-args.html
     pub fn new<L: Into<Option<Logger>>>(logger: L,
                                         size: u8,
-                                        device_i2c: T)
+                                        device: ht16k33::HT16K33<T>)
                                         -> Result<Bargraph<T>, BargraphError<T>> {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
         debug!(logger, "Constructing Bargraph"; "size" => size);
-
-        let device_logger = logger.new(o!("mod" => "HT16K33"));
-
-        let device = ht16k33::HT16K33::new(device_logger, device_i2c).map_err(BargraphError::HT16K33)?;
 
         let bargraph = Bargraph {
             device: device,

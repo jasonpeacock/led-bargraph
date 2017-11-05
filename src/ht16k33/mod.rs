@@ -11,10 +11,15 @@ use num_integer::Integer;
 
 pub mod i2c_mock;
 
-#[derive(Debug)]
 pub enum HT16K33Error<T: I2CDevice> {
     Device(T::Error),
     Error,
+}
+
+impl<T> fmt::Debug for HT16K33Error<T> where T: I2CDevice {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "HT16K33Error: {:?}", self)
+    }
 }
 
 impl<T> fmt::Display for HT16K33Error<T> where T: I2CDevice  {

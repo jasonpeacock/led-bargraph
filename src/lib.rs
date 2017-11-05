@@ -6,3 +6,4 @@ extern crate slog;
 extern crate slog_stdlog;
 
 pub mod bargraph;
+pub mod mock;

@@ -15,7 +15,11 @@ use docopt::Docopt;
 
 use slog::Drain;
 
-use i2cdev::linux::{LinuxI2CDevice};
+#[cfg(any(target_os = "linux", target_os = "android"))]
+use i2cdev::linux::LinuxI2CDevice;
+
+#[cfg(not(any(target_os = "linux", target_os = "android")))]
+use led_bargraph::mock::MockI2CDevice;
 
 use led_bargraph::bargraph::Bargraph;
 
@@ -70,7 +74,11 @@ fn main() {
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));
 
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     let device_i2c = LinuxI2CDevice::new(args.flag_i2c_path, args.flag_i2c_address).unwrap();
+
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    let device_i2c = MockI2CDevice::new();
 
     let mut bargraph = Bargraph::new(bargraph_logger,
                                      args.flag_bargraph_size,

@@ -5,22 +5,20 @@ use slog::Drain;
 use slog::Logger;
 use slog_stdlog::StdLog;
 
-use i2cdev::core::I2CDevice;
-
 use ht16k33;
 
-pub enum BargraphError<T: I2CDevice> {
-    HT16K33(ht16k33::HT16K33Error<T>),
+pub enum BargraphError {
+    HT16K33(ht16k33::HT16K33Error),
     Error,
 }
 
-impl<T> fmt::Debug for BargraphError<T> where T: I2CDevice {
+impl fmt::Debug for BargraphError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "BargraphError: {:?}", self)
     }
 }
 
-impl<T> fmt::Display for BargraphError<T> where T: I2CDevice {
+impl fmt::Display for BargraphError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             BargraphError::HT16K33(ref err) => write!(f, "Device error: {}", err),
@@ -29,7 +27,7 @@ impl<T> fmt::Display for BargraphError<T> where T: I2CDevice {
     }
 }
 
-impl<T> error::Error for BargraphError<T> where T: I2CDevice + fmt::Debug {
+impl error::Error for BargraphError {
     fn description(&self) -> &str {
         match *self {
             BargraphError::HT16K33(ref err) => err.description(),
@@ -45,13 +43,13 @@ impl<T> error::Error for BargraphError<T> where T: I2CDevice + fmt::Debug {
     }
 }
 
-pub struct Bargraph<T: I2CDevice> {
-    device: ht16k33::HT16K33<T>,
+pub struct Bargraph {
+    device: ht16k33::HT16K33,
     logger: Logger,
     size: u8,
 }
 
-impl<T> Bargraph<T> where T: I2CDevice {
+impl Bargraph {
     /// `logger = None`, will log to the `slog-stdlog`
     /// drain. This makes the library effectively work the same
     /// as it was just using `log` intead of `slog`.
@@ -60,8 +58,8 @@ impl<T> Bargraph<T> where T: I2CDevice {
     /// See http://xion.io/post/code/rust-optional-args.html
     pub fn new<L: Into<Option<Logger>>>(logger: L,
                                         size: u8,
-                                        device: ht16k33::HT16K33<T>)
-                                        -> Result<Bargraph<T>, BargraphError<T>> {
+                                        device: ht16k33::HT16K33)
+                                        -> Result<Bargraph, BargraphError> {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
         debug!(logger, "Constructing Bargraph"; "size" => size);
@@ -75,7 +73,7 @@ impl<T> Bargraph<T> where T: I2CDevice {
         Ok(bargraph)
     }
 
-    pub fn clear(&mut self) -> Result<(), BargraphError<T>> {
+    pub fn clear(&mut self) -> Result<(), BargraphError> {
         self.device.clear();
         self.device.write_display().map_err(BargraphError::HT16K33);
 
@@ -83,7 +81,7 @@ impl<T> Bargraph<T> where T: I2CDevice {
     }
 
     /// Update the display, showing up to `value` blocks filled of `range` total blocks.
-    pub fn update(&mut self, value: &u8, range: &u8) -> Result<(), BargraphError<T>> {
+    pub fn update(&mut self, value: &u8, range: &u8) -> Result<(), BargraphError> {
         self.device.clear();
 
         for block in 1..(*range + 1) {
@@ -99,7 +97,7 @@ impl<T> Bargraph<T> where T: I2CDevice {
         Ok(())
     }
 
-    pub fn set_blink(&mut self, enabled: &bool) -> Result<(), BargraphError<T>> {
+    pub fn set_blink(&mut self, enabled: &bool) -> Result<(), BargraphError> {
         if *enabled {
             self.device.set_blink(ht16k33::BLINK_2HZ).map_err(BargraphError::HT16K33);
         } else {

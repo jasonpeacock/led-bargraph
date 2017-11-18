@@ -73,13 +73,18 @@ fn main() {
 
     debug!(logger, "{:?}", args);
 
+    let device_logger = logger.new(o!("mod" => "HT16K33"));
+
     #[cfg(any(target_os = "linux", target_os = "android"))]
     let i2c_device = LinuxI2CDevice::new(args.flag_i2c_path, args.flag_i2c_address).unwrap();
+
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    let device = HT16K33::new(device_logger, i2c_device).unwrap();
 
     #[cfg(not(any(target_os = "linux", target_os = "android")))]
     let i2c_device = MockI2CDevice::new();
 
-    let device_logger = logger.new(o!("mod" => "HT16K33"));
+    #[cfg(not(any(target_os = "linux", target_os = "android")))]
     let device = HT16K33::new(device_logger, i2c_device).unwrap();
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));

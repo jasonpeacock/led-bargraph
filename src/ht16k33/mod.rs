@@ -11,30 +11,34 @@ use num_integer::Integer;
 
 pub mod i2c_mock;
 
-pub enum HT16K33Error {
-    Device(Box<error::Error>),
+pub enum HT16K33Error<D>
+    where D: I2CDevice {
+    Device(D::Error),
     Error,
 }
 
-impl fmt::Debug for HT16K33Error {
+impl<D> fmt::Debug for HT16K33Error<D>
+    where D: I2CDevice {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "HT16K33Error: {:?}", self)
     }
 }
 
-impl fmt::Display for HT16K33Error {
+impl<D> fmt::Display for HT16K33Error<D>
+    where D: I2CDevice {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            HT16K33Error::Device(ref err) => write!(f, "Device error: {}", err),
+            HT16K33Error::Device(ref err) => write!(f, "Device Error: {}", err),
             HT16K33Error::Error => write!(f, "HT16K33 Error"),
         }
     }
 }
 
-impl error::Error for HT16K33Error {
+impl<D> error::Error for HT16K33Error<D>
+    where D: I2CDevice {
     fn description(&self) -> &str {
         match *self {
-            HT16K33Error::Device(ref err) => err.description(),
+            HT16K33Error::Device(ref err) => "Device Error",
             HT16K33Error::Error => "HT16K33 Error",
         }
     }
@@ -47,8 +51,9 @@ impl error::Error for HT16K33Error {
     }
 }
 
-pub struct HT16K33 {
-    device: Box<I2CDevice<Error=error::Error>>,
+pub struct HT16K33<D>
+    where D: I2CDevice {
+    device: D,
     buffer: [u8; 16],
     logger: Logger,
 }
@@ -76,7 +81,8 @@ pub const COLOR_YELLOW: u8 = 3;
 /// Driver for interfacing with a Holtek HT16K33 16x8 LED driver,
 /// which is used in the Adafruit Bi-Color 24-bar LED Bargraph I2C
 /// backpack.
-impl HT16K33 {
+impl<D> HT16K33<D>
+    where D: I2CDevice {
     /// Create an HT16K33 driver for the LED matrix device with the specified I2C device.
     ///
     /// `logger = None`, will log to the `slog-stdlog` drain. This makes the library
@@ -84,9 +90,8 @@ impl HT16K33 {
     ///
     /// `Into` trick allows passing `Logger` directly, without the `Some` part.
     /// See http://xion.io/post/code/rust-optional-args.html
-    pub fn new<L: Into<Option<Logger>>>(logger: L,
-                                        device_i2c: Box<I2CDevice<Error=error::Error>>)
-                                        -> Result<HT16K33, HT16K33Error> {
+    pub fn new<L>(logger: L, device_i2c: D) -> Result<HT16K33<D>, HT16K33Error<D>>
+           where L: Into<Option<Logger>> {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
         debug!(logger, "Constructing HT16K33 driver");
@@ -110,7 +115,7 @@ impl HT16K33 {
     /// * Enable clock oscillator
     /// * Turn off any blinking
     /// * Maximum (15) brightness
-    fn init(&mut self) -> Result<(), HT16K33Error> {
+    fn init(&mut self) -> Result<(), HT16K33Error<D>> {
         // Turn on the oscillator.
         try!(self.device
             .smbus_write_block_data(SYSTEM_SETUP | OSCILLATOR, &[0; 0])
@@ -133,7 +138,7 @@ impl HT16K33 {
     /// BLINK_2HZ
     /// BLINK_1HZ
     /// BLINK_HALFHZ
-    pub fn set_blink(&mut self, frequency: u8) -> Result<(), HT16K33Error> {
+    pub fn set_blink(&mut self, frequency: u8) -> Result<(), HT16K33Error<D>> {
         // TODO Validate 'frequency' parameter.
         try!(self.device
             .smbus_write_block_data(BLINK_CMD | BLINK_DISPLAYON | frequency, &[0; 0])
@@ -143,7 +148,7 @@ impl HT16K33 {
     }
 
     /// Set brightness of entire display to specified value (16 levels, from 0 to 15).
-    pub fn set_brightness(&mut self, brightness: u8) -> Result<(), HT16K33Error> {
+    pub fn set_brightness(&mut self, brightness: u8) -> Result<(), HT16K33Error<D>> {
         // TODO Validate 'brightness' parameter.
         try!(self.device
             .smbus_write_block_data(BRIGHTNESS_CMD | brightness, &[0; 0])
@@ -153,7 +158,7 @@ impl HT16K33 {
     }
 
     /// Write display buffer to display hardware.
-    pub fn write_display(&mut self) -> Result<(), HT16K33Error> {
+    pub fn write_display(&mut self) -> Result<(), HT16K33Error<D>> {
         for value in 0..self.buffer.len() {
             try!(self.device
                 .smbus_write_byte_data(value as u8, self.buffer[value])

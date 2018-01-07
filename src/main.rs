@@ -18,10 +18,10 @@ use slog::Drain;
 use led_bargraph::ht16k33::HT16K33;
 use led_bargraph::bargraph::Bargraph;
 
-#[cfg(any(target_os = "linux", target_os = "android"))]
+#[cfg(target_os = "linux")]
 use i2cdev::linux::LinuxI2CDevice;
 
-#[cfg(not(any(target_os = "linux", target_os = "android")))]
+#[cfg(not(target_os = "linux"))]
 use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
 
 // Docopts: https://github.com/docopt/docopt.rs

@@ -18,9 +18,19 @@ use slog::Drain;
 use led_bargraph::ht16k33::HT16K33;
 use led_bargraph::bargraph::Bargraph;
 
+// LinuxI2CDevice only works on linux, use a mock
+// object to support compilation & testing on other
+// platforms (e.g. OSX).
+//
+// Linux
 #[cfg(target_os = "linux")]
 use i2cdev::linux::LinuxI2CDevice;
-
+//
+// Not Linux
+//
+// The `MockI2CDevice` from `i2cdev` is only available
+// for test builds, and is very basic. Use the more
+// capable and available `MockI2CDevice` from `ht16k33`.
 #[cfg(not(target_os = "linux"))]
 use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
 
@@ -45,7 +55,7 @@ Options:
     -h --help               Show this screen.
     --i2c-path=<path>       Path to the I2C device [default: /dev/i2c-1].
     --i2c-address=<N>       Address of the I2C device, in decimal [default: 112].
-    --bargraph-size=<N>     Size of the bargraph [default: 24].
+    --steps=<N>             Resolution of the bargraph [default: 24].
 ";
 
 #[derive(Debug, Deserialize)]
@@ -56,7 +66,7 @@ struct Args {
     arg_range: u8,
     flag_i2c_path: String,
     flag_i2c_address: u16,
-    flag_bargraph_size: u8,
+    flag_steps: u8,
 }
 
 fn main() {
@@ -75,23 +85,27 @@ fn main() {
 
     let device_logger = logger.new(o!("mod" => "HT16K33"));
 
-    #[cfg(any(target_os = "linux", target_os = "android"))]
+    // LinuxI2CDevice only works on linux, otherwise use a mock
+    // object to support compilation & testing.
+    //
+    // Linux
+    #[cfg(target_os = "linux")]
     let i2c_device = LinuxI2CDevice::new(args.flag_i2c_path, args.flag_i2c_address).unwrap();
+    //
+    // Not Linux
+    #[cfg(not(target_os = "linux"))]
+    let mock_logger = logger.new(o!("mod" => "HT16K33::i2c_mock"));
+    #[cfg(not(target_os = "linux"))]
+    let i2c_device = MockI2CDevice::new(mock_logger);
 
-    #[cfg(any(target_os = "linux", target_os = "android"))]
-    let device = HT16K33::new(device_logger, i2c_device).unwrap();
-
-    #[cfg(not(any(target_os = "linux", target_os = "android")))]
-    let i2c_device = MockI2CDevice::new();
-
-    #[cfg(not(any(target_os = "linux", target_os = "android")))]
     let device = HT16K33::new(device_logger, i2c_device).unwrap();
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));
-    let mut bargraph = Bargraph::new(bargraph_logger,
-                                     args.flag_bargraph_size,
-                                     device)
-            .expect("Could not create bargraph");
+    let mut bargraph = Bargraph::new(device, args.flag_steps, bargraph_logger);
+
+    bargraph
+        .initialize()
+        .expect("Could not initialize bargraph");
 
     if args.cmd_clear {
         info!(logger, "Clearing the display");

@@ -15,6 +15,3 @@ slog-async = "2.0.1"
 slog-stdlog = "3.0.2"
 slog-term = "2.0.1"
 
-#[patch.crates-io]
-#i2cdev = { git = 'https://github.com/rust-embedded/rust-i2cdev' }
-

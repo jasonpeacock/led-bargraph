@@ -53,9 +53,9 @@ Arguments:
 
 Options:
     -h --help               Show this screen.
+    --steps=<N>             Resolution of the bargraph [default: 24].
     --i2c-path=<path>       Path to the I2C device [default: /dev/i2c-1].
     --i2c-address=<N>       Address of the I2C device, in decimal [default: 112].
-    --steps=<N>             Resolution of the bargraph [default: 24].
 ";
 
 #[derive(Debug, Deserialize)]
@@ -98,7 +98,7 @@ fn main() {
     #[cfg(not(target_os = "linux"))]
     let i2c_device = MockI2CDevice::new(mock_logger);
 
-    let device = HT16K33::new(device_logger, i2c_device).unwrap();
+    let device = HT16K33::new(i2c_device, device_logger).unwrap();
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));
     let mut bargraph = Bargraph::new(device, args.flag_steps, bargraph_logger);
@@ -120,7 +120,14 @@ fn main() {
         let range = args.arg_range;
         let mut blink = false;
 
-        // Limit `value` to be no greater than `range`, and set the display to blinking.
+        // Limit `value` to be no greater than `range`, and set the display to blinking
+        // if it is larger than range to show the overflow state.
+        //
+        // This is preferred over auto-scaling the bargraph because:
+        //
+        // * The bargraph can only scale to the maximum resolution (--steps)
+        // * Users are already familiar with the configured scale, and dynamically changing
+        // the scale make its hard for users to see what's happening at a glance.
         if value > range {
             value = range;
             blink = true;
@@ -129,6 +136,7 @@ fn main() {
         bargraph
             .update(&value, &range)
             .expect("Could not update the display");
+
         bargraph
             .set_blink(&blink)
             .expect("Could not start/stop blinking the display");

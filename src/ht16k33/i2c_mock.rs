@@ -1,15 +1,9 @@
-// Copied and lightly modified from:
-// https://github.com/rust-embedded/rust-i2cdev/blob/master/src/mock.rs
-//
-// Original License:
-//
-// Copyright 2015, Paul Osborne <osbpau@gmail.com>
-//
-// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
-// http://www.apache.org/license/LICENSE-2.0> or the MIT license
-// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
-// option.  This file may not be copied, modified, or distributed
-// except according to those terms.
+//! # i2c_mock
+//!
+//! A mock I2C library to support using the [HT16K33](../struct.HT16K33.html) driver on non-Linux systems that do
+//! not have I2CDevice support.
+//!
+//! Original implementation: https://github.com/rust-embedded/rust-i2cdev/blob/master/src/mock.rs
 use std::error;
 use std::fmt;
 use std::result;
@@ -29,6 +23,30 @@ pub struct I2CRegisterMap {
 }
 
 impl I2CRegisterMap {
+    /// Create an I2CRegisterMap.
+    ///
+    /// # Arguments
+    ///
+    /// * `logger` - A logging instance.
+    ///
+    /// # Notes
+    ///
+    /// `logger = None`, will log to the `slog-stdlog` drain. This makes the library
+    /// effectively work the same as if it was just using `log` intead of `slog`.
+    ///
+    /// `Into` trick allows passing `Logger` directly, without the `Some` part.
+    /// See http://xion.io/post/code/rust-optional-args.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // NOTE: `None` is used for the Logger in these examples for convenience,
+    /// // in practice using an actual logger is preferred.
+    ///
+    /// // Create an I2CRegisterMap.
+    /// use led_bargraph::ht16k33::i2c_mock::I2CRegisterMap;
+    /// let mut i2c_register_map = I2CRegisterMap::new(None);
+    /// ```
     pub fn new<L>(logger: L) -> I2CRegisterMap
     where
         L: Into<Option<Logger>>,
@@ -44,17 +62,24 @@ impl I2CRegisterMap {
         }
     }
 
-    pub fn write_regs(&mut self, offset: usize, data: &[u8]) {
-        trace!(self.logger, "WRITE";
-               "register" => format!("0x{:X}", offset),
-               "data" => format!("{:?}", data));
-        for i in 0..data.len() {
-            self.registers[offset + i] = data[i];
-        }
-    }
-
-    /// Read data from the device to fill the provided buffer
-    fn read(&mut self, data: &mut [u8]) -> I2CResult<()> {
+    /// Read data from the registers to fill the provided buffer.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Buffer to receive data from the registers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Create an I2CRegisterMap.
+    /// use led_bargraph::ht16k33::i2c_mock::I2CRegisterMap;
+    /// let mut i2c_register_map = I2CRegisterMap::new(None);
+    ///
+    /// // Read data.
+    /// let mut buffer = [0u8; 5];
+    /// i2c_register_map.read(&mut buffer);
+    /// ```
+    pub fn read(&mut self, data: &mut [u8]) -> I2CResult<()> {
         for i in 0..data.len() {
             data[i] = self.registers[self.offset];
             self.offset += 1;
@@ -65,19 +90,66 @@ impl I2CRegisterMap {
         Ok(())
     }
 
-    /// Write the provided buffer to the device
-    fn write(&mut self, data: &[u8]) -> I2CResult<()> {
+    /// Write the provided buffer to the registers.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - Buffer to write data to the registers.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Create an I2CRegisterMap.
+    /// use led_bargraph::ht16k33::i2c_mock::I2CRegisterMap;
+    /// let mut i2c_register_map = I2CRegisterMap::new(None);
+    ///
+    /// // Write data.
+    /// let buffer = [0u8; 5];
+    /// i2c_register_map.write(&buffer);
+    /// ```
+    pub fn write(&mut self, data: &[u8]) -> I2CResult<()> {
+        // TODO validate assumptions
         // ASSUMPTION: first byte sets the offset
         // ASSUMPTION: write has length of at least one (will panic)
         let offset = data[0] as usize;
         let remdata = &data[1..];
-        self.write_regs(offset, remdata);
+        self.write_registers(offset, remdata);
         self.offset = offset + remdata.len();
         Ok(())
     }
+
+    /// Write data to registers.
+    ///
+    /// # Arguments
+    ///
+    /// * `offset` - ???
+    /// * `data` - ???
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // Create an I2CRegisterMap.
+    /// use led_bargraph::ht16k33::i2c_mock::I2CRegisterMap;
+    /// let mut i2c_register_map = I2CRegisterMap::new(None);
+    ///
+    /// // Write registers.
+    /// let offset = 0usize;
+    /// let data = [0u8; 5];
+    /// i2c_register_map.write_registers(offset, &data);
+    /// ```
+    pub fn write_registers(&mut self, offset: usize, data: &[u8]) {
+        trace!(self.logger, "WRITE";
+               "register" => format!("0x{:X}", offset),
+               "data" => format!("{:?}", data));
+        for i in 0..data.len() {
+            self.registers[offset + i] = data[i];
+        }
+    }
+
 }
 
 pub struct MockI2CDevice {
+    /// Backing datastore for mock I2C device; public access is provided for testing.
     pub regmap: I2CRegisterMap,
     logger: Logger,
 }
@@ -102,6 +174,30 @@ impl error::Error for MockI2CDeviceError {
 }
 
 impl MockI2CDevice {
+    /// Create a MockI2CDevice.
+    ///
+    /// # Arguments
+    ///
+    /// * `logger` - A logging instance.
+    ///
+    /// # Notes
+    ///
+    /// `logger = None`, will log to the `slog-stdlog` drain. This makes the library
+    /// effectively work the same as if it was just using `log` intead of `slog`.
+    ///
+    /// `Into` trick allows passing `Logger` directly, without the `Some` part.
+    /// See http://xion.io/post/code/rust-optional-args.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// // NOTE: `None` is used for the Logger in these examples for convenience,
+    /// // in practice using an actual logger is preferred.
+    ///
+    /// // Create a MockI2CDevice.
+    /// use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
+    /// let mut i2c_device = MockI2CDevice::new(None);
+    /// ```
     pub fn new<L>(logger: L) -> MockI2CDevice
     where
         L: Into<Option<Logger>>,

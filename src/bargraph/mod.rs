@@ -98,7 +98,7 @@ where
     ///
     /// ```
     /// // NOTE: `None` is used for the Logger in these examples for convenience,
-    /// // in practice using an actual logger is strongly recommended.
+    /// // in practice using an actual logger is preferred.
     ///
     /// // Create a mock I2C device.
     /// use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
@@ -106,7 +106,7 @@ where
     ///
     /// // Create a connected display.
     /// use led_bargraph::ht16k33::HT16K33;
-    /// let device = HT16K33::new(None, i2c_device).unwrap();
+    /// let device = HT16K33::new(i2c_device, None).unwrap();
     ///
     /// // Create a Bargraph instance with a resolution of 24 steps for the display.
     /// use led_bargraph::bargraph::Bargraph;
@@ -149,10 +149,12 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(None, i2c_device).unwrap();
+    /// # let device = HT16K33::new(i2c_device, None).unwrap();
     /// #
     /// // Create a Bargraph instance.
     /// let mut bargraph = Bargraph::new(device, 24, None);
+    ///
+    /// // Initialize the bargraph.
     /// bargraph.initialize();
     /// ```
     // TODO create an "initialized" or "is_ready" flag to set & for inspection by other methods.
@@ -163,7 +165,7 @@ where
         // to Bargraph. Just verify that it's usable here.
         self.device.initialize().map_err(BargraphError::HT16K33)?;
 
-        // All intializations finished, ready to display bargraphs.
+        // All intializations finished, ready to use.
         self.is_ready = true;
 
         Ok(())
@@ -182,7 +184,7 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(None, i2c_device).unwrap();
+    /// # let device = HT16K33::new(i2c_device, None).unwrap();
     /// #
     /// // Create a Bargraph instance.
     /// let mut bargraph = Bargraph::new(device, 24, None);
@@ -215,7 +217,7 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(None, i2c_device).unwrap();
+    /// # let device = HT16K33::new(i2c_device, None).unwrap();
     /// #
     /// // Create a Bargraph instance.
     /// let mut bargraph = Bargraph::new(device, 24, None);
@@ -228,7 +230,7 @@ where
             return Err(BargraphError::Error);
         }
 
-        self.device.clear();
+        self.device.clear().map_err(BargraphError::HT16K33)?;
         self.device.write_display().map_err(BargraphError::HT16K33)
     }
 
@@ -253,7 +255,7 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(None, i2c_device).unwrap();
+    /// # let device = HT16K33::new(i2c_device, None).unwrap();
     /// #
     /// // Create a Bargraph instance & initialize it.
     /// let mut bargraph = Bargraph::new(device, 24, None);
@@ -269,7 +271,7 @@ where
         }
 
         // Reset the display in preparation for the update.
-        self.device.clear();
+        self.device.clear().map_err(BargraphError::HT16K33)?;
 
         for current_bar in 1..(*range + 1) {
             let mut fill = false;
@@ -297,7 +299,7 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(None, i2c_device).unwrap();
+    /// # let device = HT16K33::new(i2c_device, None).unwrap();
     /// #
     /// // Create a Bargraph instance & initialize it.
     /// let mut bargraph = Bargraph::new(device, 24, None);
@@ -322,10 +324,19 @@ where
         }
     }
 
-    /// Enable/disable the fill for a `bar` on the Bargraph display.
-    ///
-    /// Bar `0` is at the bottom of the display (lowest value).
+    // Enable/disable the fill for a `bar` on the Bargraph display.
+    //
+    // # Arguments
+    //
+    // * `bar` - Which bar to fill.
+    // * `range` - The total range of the display (for calculating the bar size).
+    // * `fill` - Whether to fill (true) the bar or only display its header.
+    //
+    // # Notes
+    //
+    // Bar `0` is at the bottom of the display (lowest value).
     fn set_bar_fill(&mut self, bar: &u8, range: &u8, fill: &bool) {
+        // Calculate the size of the bar.
         let bar_size = self.steps / *range;
 
         let start_bar = *bar * bar_size;
@@ -335,18 +346,18 @@ where
         for bar in start_bar..end_bar {
             if *fill {
                 // Make the fill yellow if it's ON.
-                self.device.set_bar(bar, ht16k33::COLOR_YELLOW);
+                let _ = self.device.set_bar(bar, ht16k33::COLOR_YELLOW).map_err(BargraphError::HT16K33);
             } else {
                 // Leave it empty if above an ON bar.
-                self.device.set_bar(bar, ht16k33::COLOR_OFF);
+                let _ = self.device.set_bar(bar, ht16k33::COLOR_OFF).map_err(BargraphError::HT16K33);
             }
         }
 
-        // Color the marker (end of bar).
+        // Color the bar header (end of bar).
         if *fill {
-            self.device.set_bar(end_bar, ht16k33::COLOR_RED);
+            let _ = self.device.set_bar(end_bar, ht16k33::COLOR_RED);
         } else {
-            self.device.set_bar(end_bar, ht16k33::COLOR_GREEN);
+            let _ = self.device.set_bar(end_bar, ht16k33::COLOR_GREEN);
         }
     }
 }

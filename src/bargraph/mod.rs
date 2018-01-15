@@ -104,7 +104,8 @@ where
     ///
     /// // Create a connected display.
     /// use led_bargraph::ht16k33::HT16K33;
-    /// let device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// let mut device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// device.initialize().unwrap();
     ///
     /// // Create a Bargraph instance.
     /// use led_bargraph::bargraph::Bargraph;
@@ -144,7 +145,8 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # let mut device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # device.initialize().unwrap();
     /// #
     /// // Create a Bargraph instance.
     /// let mut bargraph = Bargraph::new(device, None);
@@ -152,13 +154,8 @@ where
     /// // Initialize the bargraph.
     /// bargraph.initialize();
     /// ```
-    // TODO create an "initialized" or "is_ready" flag to set & for inspection by other methods.
     pub fn initialize(&mut self) -> Result<(), BargraphError<D>> {
         debug!(self.logger, "Initializing Bargraph");
-
-        // TODO move this outside to main, it should be initialized before being given
-        // to Bargraph. Just verify that it's usable here.
-        self.device.initialize().map_err(BargraphError::HT16K33)?;
 
         // All intializations finished, ready to use.
         self.is_ready = true;
@@ -168,7 +165,8 @@ where
 
     /// Check if the Bargraph display is ready to be used.
     ///
-    /// The Bargraph must be initialized to be ready to be used.
+    /// The Bargraph must be initialized to be ready to be used, as well
+    /// as the connected `HT16K33` device.
     ///
     /// # Examples
     ///
@@ -179,7 +177,8 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # let mut device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # device.initialize().unwrap();
     /// #
     /// // Create a Bargraph instance.
     /// let mut bargraph = Bargraph::new(device, None);
@@ -194,7 +193,7 @@ where
     /// assert_eq!(true, bargraph.is_ready());
     /// ```
     pub fn is_ready(&mut self) -> bool {
-        self.is_ready
+        self.device.is_ready() && self.is_ready
     }
 
     /// Clear the Bargraph display.
@@ -212,7 +211,8 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # let mut device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # device.initialize().unwrap();
     /// #
     /// // Create a Bargraph instance.
     /// let mut bargraph = Bargraph::new(device, None);
@@ -250,7 +250,8 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # let mut device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # device.initialize().unwrap();
     /// #
     /// // Create a Bargraph instance & initialize it.
     /// let mut bargraph = Bargraph::new(device, None);
@@ -294,7 +295,8 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # let mut device = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// # device.initialize().unwrap();
     /// #
     /// // Create a Bargraph instance & initialize it.
     /// let mut bargraph = Bargraph::new(device, None);

@@ -206,13 +206,6 @@ where
         // All intializations finished, ready to use.
         self.is_ready = true;
 
-        // TODO move this to bargraph?
-        // Reset the display.
-        debug!(self.logger, "Turning on display (disable blink)");
-        self.set_blink(BLINK_OFF)?;
-        debug!(self.logger, "Setting display to full brightness");
-        self.set_brightness(15)?;
-
         Ok(())
     }
 

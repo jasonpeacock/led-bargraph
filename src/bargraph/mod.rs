@@ -157,13 +157,23 @@ where
     pub fn initialize(&mut self) -> Result<(), BargraphError<D>> {
         debug!(self.logger, "Initializing Bargraph");
 
+        if ! self.device.is_ready() {
+            return Err(BargraphError::Error);
+        }
+
+        // Reset the display.
+        debug!(self.logger, "Turning on display (disable blink)");
+        let _ = self.device.set_blink(ht16k33::BLINK_OFF).map_err(BargraphError::HT16K33);
+        debug!(self.logger, "Setting display to full brightness");
+        let _ = self.device.set_brightness(15).map_err(BargraphError::HT16K33);
+
         // All intializations finished, ready to use.
         self.is_ready = true;
 
         Ok(())
     }
 
-    /// Check if the Bargraph display is ready to be used.
+    /// Check if the Bargraph display is ready.
     ///
     /// The Bargraph must be initialized to be ready to be used, as well
     /// as the connected `HT16K33` device.

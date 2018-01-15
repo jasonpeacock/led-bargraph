@@ -74,8 +74,9 @@ where
 {
     i2c_device: D,
     buffer: [u8; 16],
-    logger: Logger,
+    steps: u8,
     is_ready: bool,
+    logger: Logger,
 }
 
 // System initialization values.
@@ -120,6 +121,7 @@ where
     /// # Arguments
     ///
     /// * `i2c_device` - The I2C device to communicate with the HT16K33 driver.
+    /// * `steps` - The resolution of the display.
     /// * `logger` - A logging instance.
     ///
     /// # Notes
@@ -140,23 +142,26 @@ where
     /// use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
     /// let i2c_device = MockI2CDevice::new(None);
     ///
-    /// // Create a connected display.
+    /// // Create a connected display with a resolution of 24 steps.
     /// use led_bargraph::ht16k33::HT16K33;
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ```
-    pub fn new<L>(i2c_device: D, logger: L) -> Result<HT16K33<D>, HT16K33Error<D>>
+    pub fn new<L>(i2c_device: D,
+                  steps: u8,
+                  logger: L) -> Result<HT16K33<D>, HT16K33Error<D>>
     where
         L: Into<Option<Logger>>,
     {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
-        debug!(logger, "Constructing HT16K33 driver");
+        debug!(logger, "Constructing HT16K33 driver"; "steps" => steps);
 
         let ht16k33 = HT16K33 {
             i2c_device: i2c_device,
             buffer: [0; 16],
-            logger: logger,
+            steps: steps,
             is_ready: false,
+            logger: logger,
         };
 
         Ok(ht16k33)
@@ -180,7 +185,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     ///
     /// // Initialize the HT16K33.
     /// ht16k33.initialize();
@@ -211,6 +216,26 @@ where
         Ok(())
     }
 
+    /// Get the resolution (number of steps) of the display.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use led_bargraph::ht16k33::HT16K33;
+    /// # use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
+    /// #
+    /// # let i2c_device = MockI2CDevice::new(None);
+    /// #
+    /// // Create an HT16K33 driver.
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// ht16k33.initialize();
+    ///
+    /// let steps = ht16k33.get_resolution();
+    /// ```
+    pub fn get_resolution(&mut self) -> u8 {
+        self.steps
+    }
+
     /// Check if the HT16K33 driver is ready to be used.
     ///
     /// The HT16K33 driver must be initialized to be ready to be used.
@@ -224,7 +249,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     ///
     /// // Not ready to use yet.
     /// assert_eq!(false, ht16k33.is_ready());
@@ -263,7 +288,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ht16k33.initialize();
     ///
     /// // Blink the display quickly.
@@ -299,7 +324,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ht16k33.initialize();
     ///
     /// // Set the display to maximum brightness.
@@ -331,7 +356,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ht16k33.initialize();
     ///
     /// // Write the current buffer contents to the HT16K33 driver.
@@ -373,7 +398,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ht16k33.initialize();
     ///
     /// // Turn on the LED at address 0.
@@ -417,7 +442,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ht16k33.initialize();
     ///
     /// // Clear the display buffer.
@@ -465,7 +490,7 @@ where
     /// # let i2c_device = MockI2CDevice::new(None);
     /// #
     /// // Create an HT16K33 driver.
-    /// let mut ht16k33 = HT16K33::new(i2c_device, None).unwrap();
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
     /// ht16k33.initialize();
     ///
     /// // Set the first bar to be Yellow.

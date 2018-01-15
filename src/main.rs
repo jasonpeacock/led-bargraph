@@ -98,10 +98,10 @@ fn main() {
     #[cfg(not(target_os = "linux"))]
     let i2c_device = MockI2CDevice::new(mock_logger);
 
-    let device = HT16K33::new(i2c_device, device_logger).unwrap();
+    let device = HT16K33::new(i2c_device, args.flag_steps, device_logger).unwrap();
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));
-    let mut bargraph = Bargraph::new(device, args.flag_steps, bargraph_logger);
+    let mut bargraph = Bargraph::new(device, bargraph_logger);
 
     bargraph
         .initialize()

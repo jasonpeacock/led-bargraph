@@ -68,7 +68,6 @@ where
     D: I2CDevice,
 {
     device: ht16k33::HT16K33<D>,
-    steps: u8,
     logger: Logger,
     is_ready: bool,
 }
@@ -82,7 +81,6 @@ where
     /// # Arguments
     ///
     /// * `device` - A connected `HTK1633` device that drives the display.
-    /// * `steps` - A resolution of the display.
     /// * `logger` - A logging instance.
     ///
     /// # Notes
@@ -106,16 +104,14 @@ where
     ///
     /// // Create a connected display.
     /// use led_bargraph::ht16k33::HT16K33;
-    /// let device = HT16K33::new(i2c_device, None).unwrap();
+    /// let device = HT16K33::new(i2c_device, 24, None).unwrap();
     ///
-    /// // Create a Bargraph instance with a resolution of 24 steps for the display.
+    /// // Create a Bargraph instance.
     /// use led_bargraph::bargraph::Bargraph;
-    /// let mut bargraph = Bargraph::new(device, 24, None);
+    /// let mut bargraph = Bargraph::new(device, None);
     /// ```
-    // TODO steps should be defined by the device (HT16K33) and queried from there.
     pub fn new<L>(
         device: ht16k33::HT16K33<D>,
-        steps: u8,
         logger: L,
     ) -> Bargraph<D>
     where
@@ -123,11 +119,10 @@ where
     {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
-        debug!(logger, "Constructing Bargraph"; "steps" => steps);
+        debug!(logger, "Constructing Bargraph");
 
         Bargraph {
             device: device,
-            steps: steps,
             logger: logger,
             is_ready: false,
         }
@@ -149,10 +144,10 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, None).unwrap();
+    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
     /// #
     /// // Create a Bargraph instance.
-    /// let mut bargraph = Bargraph::new(device, 24, None);
+    /// let mut bargraph = Bargraph::new(device, None);
     ///
     /// // Initialize the bargraph.
     /// bargraph.initialize();
@@ -184,10 +179,10 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, None).unwrap();
+    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
     /// #
     /// // Create a Bargraph instance.
-    /// let mut bargraph = Bargraph::new(device, 24, None);
+    /// let mut bargraph = Bargraph::new(device, None);
     ///
     /// // Not ready to use yet.
     /// assert_eq!(false, bargraph.is_ready());
@@ -217,10 +212,10 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, None).unwrap();
+    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
     /// #
     /// // Create a Bargraph instance.
-    /// let mut bargraph = Bargraph::new(device, 24, None);
+    /// let mut bargraph = Bargraph::new(device, None);
     /// bargraph.initialize();
     ///
     /// bargraph.clear();
@@ -255,10 +250,10 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, None).unwrap();
+    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
     /// #
     /// // Create a Bargraph instance & initialize it.
-    /// let mut bargraph = Bargraph::new(device, 24, None);
+    /// let mut bargraph = Bargraph::new(device, None);
     /// bargraph.initialize();
     ///
     /// // Display a bargraph with 3 of 12 bars filled.
@@ -299,10 +294,10 @@ where
     /// # use led_bargraph::bargraph::Bargraph;
     /// #
     /// # let i2c_device = MockI2CDevice::new(None);
-    /// # let device = HT16K33::new(i2c_device, None).unwrap();
+    /// # let device = HT16K33::new(i2c_device, 24, None).unwrap();
     /// #
     /// // Create a Bargraph instance & initialize it.
-    /// let mut bargraph = Bargraph::new(device, 24, None);
+    /// let mut bargraph = Bargraph::new(device, None);
     /// bargraph.initialize();
     ///
     /// // Make the bargraph blink continuously.
@@ -337,7 +332,7 @@ where
     // Bar `0` is at the bottom of the display (lowest value).
     fn set_bar_fill(&mut self, bar: &u8, range: &u8, fill: &bool) {
         // Calculate the size of the bar.
-        let bar_size = self.steps / *range;
+        let bar_size = self.device.get_resolution() / *range;
 
         let start_bar = *bar * bar_size;
         let end_bar = start_bar + bar_size - 1;

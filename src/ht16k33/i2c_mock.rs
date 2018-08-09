@@ -241,6 +241,13 @@ impl I2CDevice for MockI2CDevice {
         Ok(Vec::new())
     }
 
+    fn smbus_read_i2c_block_data(&mut self, _register: u8, _len: u8) -> I2CResult<Vec<u8>> {
+        debug!(self.logger, "smbus_read_i2c_block_data";
+               "register" => format!("0x{:X}", _register),
+               "length" => _len);
+        Ok(Vec::new())
+    }
+
     fn smbus_write_block_data(&mut self, _register: u8, _values: &[u8]) -> I2CResult<()> {
         debug!(self.logger, "smbus_write_block_data";
                "register" => format!("0x{:X}", _register),
@@ -248,17 +255,17 @@ impl I2CDevice for MockI2CDevice {
         Ok(())
     }
 
-    fn smbus_process_block(&mut self, _register: u8, _values: &[u8]) -> I2CResult<()> {
-        debug!(self.logger, "smbus_process_block";
+    fn smbus_write_i2c_block_data(&mut self, _register: u8, _values: &[u8]) -> I2CResult<()> {
+        debug!(self.logger, "smbus_write_i2c_block_data";
                "register" => format!("0x{:X}", _register),
                "values" => format!("{:?}", _values));
         Ok(())
     }
 
-    fn smbus_read_i2c_block_data(&mut self, _register: u8, _len: u8) -> I2CResult<Vec<u8>> {
-        debug!(self.logger, "smbus_read_i2c_block_data";
+    fn smbus_process_block(&mut self, _register: u8, _values: &[u8]) -> I2CResult<Vec<u8>> {
+        debug!(self.logger, "smbus_process_block";
                "register" => format!("0x{:X}", _register),
-               "length" => _len);
+               "values" => format!("{:?}", _values));
         Ok(Vec::new())
     }
 }

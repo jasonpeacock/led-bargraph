@@ -4,16 +4,13 @@ version = "0.2.0"
 authors = ["Jason Peacock <jason@jasonpeacock.com>"]
 
 [dependencies]
-docopt = "1.0.0"
-#i2cdev = "0.3.1"
+docopt = "1.0.2"
 i2cdev = "0.4.0"
-#i2cdev = { git = 'https://github.com/rust-embedded/rust-i2cdev' }
-num-integer = "0.1.38"
-serde = "1.0.66"
-serde_derive = "1.0.66"
-slog = "2.2.3"
+num-integer = "0.1.39"
+serde = "1.0.80"
+serde_derive = "1.0.80"
+slog = "2.4.1"
 slog-async = "2.3.0"
-slog-stdlog = "3.0.2"
+slog-stdlog = "3.0.4-pre"
 slog-term = "2.4.0"
 slog-scope = "4.0.1"
-

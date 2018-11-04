@@ -72,11 +72,11 @@ pub struct HT16K33<D>
 where
     D: I2CDevice,
 {
-    i2c_device: D,
     buffer: [u8; 16],
-    steps: u8,
+    i2c_device: D,
     is_ready: bool,
     logger: Logger,
+    steps: u8,
 }
 
 // System initialization values.
@@ -100,9 +100,9 @@ pub const BLINK_1HZ: u8 = 0x04;
 /// Blink the display at 0.5Hz.
 pub const BLINK_HALFHZ: u8 = 0x06;
 
-// TODO use an enum for these values.
 // A bitmask value where the first bit is Green, and the second bit is
-// Red.  If both bits are set then the color is Yellow (Red + Green light).
+// Red. If both bits are set then the color is Yellow (Red + Green light).
+// TODO use an enum for these values.
 /// Turn off both the Red & Green LEDs.
 pub const COLOR_OFF: u8 = 0;
 /// Turn on only the Green LED.
@@ -127,7 +127,7 @@ where
     /// # Notes
     ///
     /// `logger = None`, will log to the `slog-stdlog` drain. This makes the library
-    /// effectively work the same as if it was just using `log` intead of `slog`.
+    /// effectively work the same as if it was just using `log` instead of `slog`.
     ///
     /// `Into` trick allows passing `Logger` directly, without the `Some` part.
     /// See http://xion.io/post/code/rust-optional-args.html
@@ -157,11 +157,11 @@ where
         debug!(logger, "Constructing HT16K33 driver"; "steps" => steps);
 
         let ht16k33 = HT16K33 {
-            i2c_device: i2c_device,
             buffer: [0; 16],
-            steps: steps,
+            i2c_device: i2c_device,
             is_ready: false,
             logger: logger,
+            steps: steps,
         };
 
         Ok(ht16k33)
@@ -197,13 +197,11 @@ where
             self.logger,
             "Setting up the system & enabling the oscillator"
         );
-        try!(
-            self.i2c_device
-                .smbus_write_block_data(SYSTEM_SETUP | OSCILLATOR, &[0; 0])
-                .map_err(HT16K33Error::Device)
-        );
+        self.i2c_device
+            .smbus_write_block_data(SYSTEM_SETUP | OSCILLATOR, &[0; 0])
+            .map_err(HT16K33Error::Device)?;
 
-        // All intializations finished, ready to use.
+        // All initializations finished, ready to use.
         self.is_ready = true;
 
         Ok(())
@@ -293,11 +291,9 @@ where
         }
 
         // TODO Validate `frequency` parameter.
-        try!(
-            self.i2c_device
-                .smbus_write_block_data(BLINK_CMD | BLINK_DISPLAYON | frequency, &[0; 0])
-                .map_err(HT16K33Error::Device)
-        );
+        self.i2c_device
+            .smbus_write_block_data(BLINK_CMD | BLINK_DISPLAYON | frequency, &[0; 0])
+            .map_err(HT16K33Error::Device)?;
 
         Ok(())
     }
@@ -329,11 +325,9 @@ where
         }
 
         // TODO Validate `brightness` parameter.
-        try!(
-            self.i2c_device
-                .smbus_write_block_data(BRIGHTNESS_CMD | brightness, &[0; 0])
-                .map_err(HT16K33Error::Device)
-        );
+        self.i2c_device
+            .smbus_write_block_data(BRIGHTNESS_CMD | brightness, &[0; 0])
+            .map_err(HT16K33Error::Device)?;
 
         Ok(())
     }
@@ -362,11 +356,40 @@ where
         }
 
         for value in 0..self.buffer.len() {
-            try!(
-                self.i2c_device
-                    .smbus_write_byte_data(value as u8, self.buffer[value])
-                    .map_err(HT16K33Error::Device)
-            );
+            self.i2c_device
+                .smbus_write_byte_data(value as u8, self.buffer[value])
+                .map_err(HT16K33Error::Device)?;
+        }
+
+        Ok(())
+    }
+
+    /// Read the display buffer from the HT16K33 driver.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use led_bargraph::ht16k33::HT16K33;
+    /// # use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
+    /// #
+    /// # let i2c_device = MockI2CDevice::new(None);
+    /// #
+    /// // Create an HT16K33 driver.
+    /// let mut ht16k33 = HT16K33::new(i2c_device, 24, None).unwrap();
+    /// ht16k33.initialize();
+    ///
+    /// // Write the current buffer contents to the HT16K33 driver.
+    /// let values = ht16k33.read_display();
+    /// ```
+    pub fn read_display(&mut self) -> Result<(), HT16K33Error<D>> {
+        if ! self.is_ready() {
+            return Err(HT16K33Error::Error);
+        }
+
+        for value in 0..self.buffer.len() {
+            self.i2c_device
+                .smbus_write_byte_data(value as u8, self.buffer[value])
+                .map_err(HT16K33Error::Device)?;
         }
 
         Ok(())

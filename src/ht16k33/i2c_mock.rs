@@ -32,7 +32,7 @@ impl I2CRegisterMap {
     /// # Notes
     ///
     /// `logger = None`, will log to the `slog-stdlog` drain. This makes the library
-    /// effectively work the same as if it was just using `log` intead of `slog`.
+    /// effectively work the same as if it was just using `log` instead of `slog`.
     ///
     /// `Into` trick allows passing `Logger` directly, without the `Some` part.
     /// See http://xion.io/post/code/rust-optional-args.html
@@ -49,7 +49,7 @@ impl I2CRegisterMap {
     /// ```
     pub fn new<L>(logger: L) -> I2CRegisterMap
     where
-        L: Into<Option<Logger>>,
+        L: Into<Option<Logger>>
     {
         let logger = logger.into().unwrap_or(Logger::root(StdLog.fuse(), o!()));
 
@@ -110,7 +110,7 @@ impl I2CRegisterMap {
     pub fn write(&mut self, data: &[u8]) -> I2CResult<()> {
         // TODO validate assumptions
         // ASSUMPTION: first byte sets the offset
-        // ASSUMPTION: write has length of at least one (will panic)
+        // ASSUMPTION: write has length of at least 1 (will panic)
         let offset = data[0] as usize;
         let remdata = &data[1..];
         self.write_registers(offset, remdata);

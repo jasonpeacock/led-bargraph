@@ -1,5 +1,9 @@
 extern crate docopt;
 
+extern crate ht16k33;
+extern crate i2cdev;
+extern crate led_bargraph;
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -8,15 +12,10 @@ extern crate slog;
 extern crate slog_async;
 extern crate slog_term;
 
-extern crate i2cdev;
-extern crate led_bargraph;
-
 use docopt::Docopt;
-
+use ht16k33::HT16K33;
+use led_bargraph::Bargraph;
 use slog::Drain;
-
-use led_bargraph::ht16k33::HT16K33;
-use led_bargraph::bargraph::Bargraph;
 
 // LinuxI2CDevice only works on linux, use a mock
 // object to support compilation & testing on other
@@ -32,7 +31,7 @@ use i2cdev::linux::LinuxI2CDevice;
 // for test builds, and is very basic. Use the more
 // capable and available `MockI2CDevice` from `ht16k33`.
 #[cfg(not(target_os = "linux"))]
-use led_bargraph::ht16k33::i2c_mock::MockI2CDevice;
+use ht16k33::i2c_mock::MockI2CDevice;
 
 // Docopts: https://github.com/docopt/docopt.rs
 const USAGE: &'static str = "

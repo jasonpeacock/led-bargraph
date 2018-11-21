@@ -2,13 +2,13 @@
 
 A Rust library & application for the [Adafruit Bi-Color (Red/Green) 24-Bar Bargraph w/I2C Backpack Kit](https://www.adafruit.com/product/1721).
 
-# Features
+You can integrate `led-bargraph` into your project through the [releases on crates.io](https://crates.io/crates/ht16k33):
 
-## Configurable commandline application
-
-## Direct-write library
-
-# Requirements
+```toml
+# Cargo.toml
+[dependencies]
+led-bargraph = "0.1.0"
+```
 
 # User Guide
 
@@ -47,17 +47,26 @@ Options:
 * Refactor `HT16K33` to use an interface.
 * `HT16K33` should initialize itself before being passed to `Bargraph`, and `Bargraph` just verifies that it's usable.
 
+# In Progress
+
+* Add `--show` option for virtual display on the command-line.
+
 ## Completed
 
-* <del>Support OSX compilation.</del> Fixed in Release 0.2
+* <del>Refactor `ht16k33` library into a separate crate.</del>
+* <del>Support OSX compilation.</del>
 
-# Releases
+# License
 
-## 0.2
+Licensed under either of
 
-- Refactored to use custom error types.
-- Support OSX compilation through traits/generics to inject the I2CDevice.
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
-## 0.1
+at your option.
 
-- It works!
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you,
+as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+

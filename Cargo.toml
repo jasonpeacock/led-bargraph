@@ -1,6 +1,6 @@
 [package]
 name    = "led_bargraph"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Jason Peacock <jason@jasonpeacock.com>"]
 description = "A Rust library & application for the Adafruit Bi-Color (Red/Green) 24-Bar Bargraph w/I2C Backpack Kit."
 keywords = ["led", "gpio", "driver", "bargraph", "display"]
@@ -9,6 +9,9 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/jasonpeacock/led-bargraph"
 readme = "README.md"
 documentation = "https://docs.rs/led-bargraph"
+
+# Don't include CI scripts in the package.
+exclude = ["/ci/*"]
 
 [dependencies]
 ansi_term     = "0.11.0"

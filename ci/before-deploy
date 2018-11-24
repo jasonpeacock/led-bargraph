@@ -1,0 +1,251 @@
+#!/usr/bin/env bash
+# Build and package the project for release, for each target platform.
+#
+# Adapted from `ci/before_deploy.bash` in the `sharkdp/hyperfine` project:
+# https://github.com/sharkdp/hyperfine/blob/master/ci/before_deploy.bash
+#
+# Expected environment variables:
+#
+# - DEBUG_BEFORE_DEPLOY=true (Optional) If set, will enable verbose output
+#   for debugging.
+# - TARGET="<Rust platform target>" (Required) Declare the platform target to
+#   build a release binary for. Example values:
+#     - x86_64-apple-darwin
+#     - x86_64-unknown-linux-gnu
+#     - i686-unknown-linux-gnu
+# - PROJECT_NAME="<application name>" (Required) Set the name of the application.
+#   Example value: "led-bargraph"
+# - TRAVIS_TAG="" (Required) The tag (version) of the application. Example value: "v0.1.0"
+#
+set -o errexit -o nounset -o pipefail
+
+log_debug() {
+  if [[ "${DEBUG_BEFORE_DEPLOY:-false}" == true ]]; then
+    log_msg "DEBUG" "$@"
+  fi
+}
+
+log_info() {
+  log_msg "INFO" "$@"
+}
+
+log_error() {
+  log_msg "ERROR" "$@"
+}
+
+log_msg() {
+  local -r level="${1}" && shift
+  local -r msg="${*}"
+
+  echo >&2 "[${level}] ${msg}"
+}
+
+# Function: get_tempdir
+#
+# Create and return a temporary directory. It is the caller's responsibility
+# to cleanup the temporary directory when finished, or they can leave it to be
+# cleaned up on process exit. (per `mktemp`'s behavior)
+#
+# Returns:
+# 0 for success, otherwise failure.
+get_tempdir() {
+  log_debug "Creating tempdir..."
+
+  local tempdir
+  tempdir=$(mktemp -d 2>/dev/null || mktemp -d -t tmp)
+  declare -r tempdir
+
+  log_debug "Created tempdir [${tempdir}]"
+  echo "${tempdir}"
+  return 0
+}
+
+# Function: cargo_build
+#
+# Execute `cargo build` for the given target platform.
+#
+# Parameters:
+# $1 (string) - Target platform to build for.
+#
+# Returns:
+# Success/failure of the `cargo build` command.
+cargo_build() {
+  log_debug "Building target..."
+
+  local -r target="${1}" && shift
+
+  log_info "Building for target [${target}] with --release"
+  cargo build --target "${target}" --release --verbose
+}
+
+# Function: install_files
+#
+# Parameters:
+# $1 (string) - Full filepath of the binary to install.
+# $2 (string) - Path to install the binary to.
+# $3 (string) - Path to install the docs/licenses/etc to, optional, defaults to $2.
+#
+# Returns:
+# 0 for success, otherwise failure.
+install_files() {
+  log_debug "Installing files..."
+
+  local -r release_filepath="${1}" && shift
+  local -r bin_path="${1}" && shift
+  local -r doc_path="${1:-"${bin_path}"}" # Optional
+
+  local -r release_name="${release_filepath##*/}"
+
+  # Create destination directories.
+  install -d -v "${bin_path}" "${doc_path}"
+
+  # Copy the main binary and strip (`-s`) it.
+  install -v -s -m 0755 "${release_filepath}" "${bin_path}/${release_name}"
+  log_info "Installed binary [${release_filepath}] to [${bin_path}/${release_name}]"
+
+  # Copy the doc files, these are available in the current path.
+  local -r doc_files=("README.md" "LICENSE-MIT" "LICENSE-APACHE")
+  for doc_file in ${doc_files[*]}; do
+    install -v -m 0644 "${doc_file}" "${doc_path}/${doc_file}"
+    log_info "Installed doc [${doc_file}] to [${doc_path}/${doc_file}]"
+  done
+
+  return 0
+}
+
+# Function: create_archive_package
+#
+# Create a tarball archive of the built project.
+#
+# Parameters:
+# $1 (string) - Target platform to archive.
+# $2 (string) - Name of project.
+# $3 (string) - Travis-CI tag.
+#
+# Prints:
+# Full path to the archive.
+#
+# Returns:
+# 0 for success, otherwise failure.
+create_archive_package() {
+  log_debug "Creating archive package..."
+
+  local -r target="${1}" && shift
+  local -r project_name="${1}" && shift
+  local -r travis_tag="${1}" && shift
+
+  local tempdir
+  tempdir="$(get_tempdir)"
+  declare -r tempdir
+
+  local -r package_name="${project_name}-${travis_tag}-${target}"
+
+  local archive_filepath
+  archive_filepath="$(pwd)/${package_name}.tar.gz"
+  declare -r archive_filepath
+
+  install_files \
+    "target/${target}/release/${project_name}" \
+    "${tempdir}/${package_name}"
+
+  tar -czf "${archive_filepath}" -C "${tempdir}/${package_name}" "."
+  log_info "Created archive package [${package_name}]"
+
+  rm -rf "${tempdir}"
+  return 0
+}
+
+# Function: create_debian_package
+#
+# Create a Debian package of the built project.
+#
+# Parameters:
+# $1 (string) - Target platform to archive.
+# $2 (string) - Name of project.
+# $3 (string) - Travis-CI tag.
+#
+# Returns:
+# 0 for success, otherwise failure.
+create_debian_package() {
+  log_debug "Creating Debian package..."
+
+  local -r target="${1}" && shift
+  local -r project_name="${1}" && shift
+  local -r travis_tag="${1}" && shift
+
+  local architecture
+  case "${target}" in
+    x86_64*)
+      architecture="amd64"
+      ;;
+    i686*)
+      architecture="i386"
+      ;;
+    *)
+      log_error "Unknown target [${target}]"
+      return 1
+      ;;
+  esac
+  declare -r architecture
+
+  # Strip the leading `v` from the tag, "v0.1.0" => "0.1.0".
+  local -r version=${travis_tag#v}
+
+  local dpkgname="${project_name}"
+  local conflictname="${project_name}-musl"
+  if [[ "${target}" = *musl* ]]; then
+    dpkgname="${project_name}-musl"
+    conflictname="${project_name}"
+  fi
+  declare -r dpkgname
+  declare -r conflictname
+
+  local tempdir
+  tempdir="$(get_tempdir)"
+  declare -r tempdir
+
+  install_files \
+    "target/${target}/release/${project_name}" \
+    "${tempdir}/usr/bin" \
+    "${tempdir}/usr/share/doc/${project_name}"
+
+  # Control file
+  mkdir "${tempdir}/DEBIAN"
+  cat > "${tempdir}/DEBIAN/control" <<EOF
+Package: ${dpkgname}
+Version: ${version}
+Section: utils
+Priority: optional
+Maintainer: Jason Peacock <jason@jasonpeacock.com>
+Architecture: ${architecture}
+Provides: ${project_name}
+Conflicts: ${conflictname}
+Description: A command-line benchmarking tool.
+EOF
+
+  fakeroot dpkg-deb --build "${tempdir}" "${dpkgname}_${version}_${architecture}.deb"
+  log_info "Created Debian package [${dpkgname}_${version}_${architecture}.deb]"
+
+  rm -rf "${tempdir}"
+  return 0
+}
+
+#
+# MAIN
+#
+if [[ "${DEBUG_BEFORE_DEPLOY:-false}" == true ]]; then
+  # Enable verbose execution for debugging.
+  set -x
+fi
+
+# shellcheck disable=SC2153
+cargo_build "${TARGET}"
+
+# shellcheck disable=SC2153
+create_archive_package "${TARGET}" "${PROJECT_NAME}" "${TRAVIS_TAG}"
+
+if [[ "${TARGET}" == *linux* ]]; then
+  create_debian_package "${TARGET}" "${PROJECT_NAME}" "${TRAVIS_TAG}"
+fi
+
+exit 0

@@ -1,18 +1,16 @@
 # LED Bargraph
 
+[![Version info](https://img.shields.io/crates/v/led-bargraph.svg)](https://crates.io/crates/led-bargraph)
+[![Documentation](https://docs.rs/led-bargraph/badge.svg)](https://docs.rs/led-bargraph)
+[![Build Status](https://travis-ci.org/jasonpeacock/led-bargraph.svg?branch=master)](https://travis-ci.org/jasonpeacock/led-bargraph)
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/jasonpeacock/led-bargraph.svg)](http://isitmaintained.com/project/jasonpeacock/led-bargraph "Average time to resolve an issue")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/jasonpeacock/led-bargraph.svg)](http://isitmaintained.com/project/jasonpeacock/led-bargraph "Percentage of issues still open")
+
 A Rust library & application for the [Adafruit Bi-Color (Red/Green) 24-Bar Bargraph w/I2C Backpack Kit](https://www.adafruit.com/product/1721).
-
-You can integrate `led-bargraph` into your project through the [releases on crates.io](https://crates.io/crates/ht16k33):
-
-```toml
-# Cargo.toml
-[dependencies]
-led-bargraph = "0.1.0"
-```
 
 # User Guide
 
-```
+```text
 LED Bargraph.
 
 Usage:
@@ -35,6 +33,22 @@ Options:
     --bargraph-size=<N>     Size of the bargraph [default: 24].
 ```
 
+# Installation
+
+### With cargo (Linux, OSX, Windows)
+
+`led-bargraph` can be installed via [cargo](https://doc.rust-lang.org/cargo/):
+
+```
+cargo install led-bargraph
+```
+
+Make sure that you use Rust 1.24 or higher.
+
+### From binaries (Linux, OSX, Windows)
+
+Download the corresponding archive from the [Releases](https://github.com/jasonpeacock/led-bargraph/releases) page.
+
 # Todo
 
 * Support configuring defaults & behavior via TOML.
@@ -51,17 +65,24 @@ Options:
 
 * Add `--show` option for virtual display on the command-line.
 
-## Completed
+## Supported Rust Versions
 
-* <del>Refactor `ht16k33` library into a separate crate.</del>
-* <del>Support OSX compilation.</del>
+See the top of the [Travis configuration file](.travis.yml) for the oldest, and other, supported Rust versions.
+
+## Supported Platforms
+
+* Linux
+    * 32 & 64bit
+    * gnu & musl
+* OSX
+    * 64bit
 
 # License
 
 Licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+* Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+* MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
 

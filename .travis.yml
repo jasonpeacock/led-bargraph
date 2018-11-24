@@ -1,0 +1,90 @@
+language: rust
+cache: cargo
+rust:
+    # Supported Rust versions.
+    - stable
+    - beta
+    - nightly
+    # Oldest supported Rust version.
+    - 1.24.0
+os:
+    # OSX is explicitly `include`d in the matrix below as we don't need to build
+    # all the linux 32/64+gnu/musl combinations for it.
+    - linux
+env:
+    matrix:
+        - TARGET=x86_64-unknown-linux-gnu
+        - TARGET=x86_64-unknown-linux-musl
+        - TARGET=i686-unknown-linux-gnu
+        - TARGET=i686-unknown-linux-musl
+    global:
+        # Default target on `travis-ci`, used as conditional check in the `install` stage.
+        - HOST=x86_64-unknown-linux-gnu
+        # Used on the deployment script.
+        - PROJECT_NAME=led-bargraph
+        # Enable verbose output of the `before-deploy` script.
+        - DEBUG_BEFORE_DEPLOY=true
+
+matrix:
+    allow_failures:
+        - rust: nightly
+          fast_finish: true
+    include:
+        - os: osx
+          rust: stable
+          env: TARGET=x86_64-apple-darwin
+        - os: osx
+          rust: beta
+          env: TARGET=x86_64-apple-darwin
+        - os: osx
+          rust: nightly
+          env: TARGET=x86_64-apple-darwin
+        - os: osx
+          rust: 1.24.0
+          env: TARGET=x86_64-apple-darwin
+
+addons:
+    apt:
+        packages:
+            # Needed for i686-unknown-linux-gnu target.
+            - gcc-multilib
+              # Needed to build deb packages.
+            - fakeroot
+
+install:
+    # Prevent target re-add error from rustup.
+    - if [[ $TRAVIS_OS_NAME = linux && $HOST != $TARGET ]]; then rustup target add $TARGET; fi
+
+script:
+    # Incorporate TARGET env var to the build and test process.
+    - cargo build --target $TARGET --verbose
+    - cargo test --target $TARGET --verbose
+
+before_deploy:
+    - ./ci/before-deploy
+
+deploy:
+    provider: releases
+    # **NOTE** Updating the `api_key.secure`:
+    # - Go to: https://github.com/settings/tokens/new
+    # - Generate new token using `public_repo` scope.
+    # - Encrypt it using: `travis encrypt API_KEY_HERE`
+    # - Paste the output below.
+    api_key:
+        secure: "o9/2FyTlDBQUQOfLLbSQVix641TFuBXkCEa6OXX09/3U3yMg1SAr85i+KIyzj/6HlkyJnOVodR3qQ+0r+qh1t0TF9h06Z4EBUzs0LGTgd2Gh0muZZ8JDG9Vv/+z6Qk3NnLDdCVmRjXy46+fRo/IXVxQLwbPE/a8WB+b7lIcwY3DXQyP+CNJD5W6pYJw/v/Q20/+ADcNokPaoLlnr/R5vB1BWwcWE6NYiOsID4Qa7Ya9zvbdDFIP8Qbrxi5bt2imfF4MX/TkqrY6VYXC87UQt6oiooMx9lswmxWGVSIJLD2Edz90fGwsgmirNMm/tfzZv/xKUUAai/DBZ5vimH58DCRerg7LJ3V/8s8EARwYh+gAnFncwQVUiNEnXSboUX1Y604tm656NiGORDiOFOmdSEoif8broibTFmPhPquzza2pZA+uGOkEj1X/rN/ksMW6Qt4TbVQ8frhkhHI/oZ8HrLiv8P5iRJOBJoGQvRxG6nRCfSy5UVIAlZUxvn0D4mwmiUDYu0RuIn50cZeDh6vuij2RkL/fBntNQAS0p6xmWyYC441fcCBTBCuiBoSNBYLQyF3qUEHMV1vH1PEoHm5blwjyYn6zME4Te/Ao0Iqj1Z1VIpfKnN0mUzb46Zs9LFLUI7rtBhATLeVISA4wC0b9PStXd5aJNsQcflwkfYAPOGe8="
+        # For uploading multiple files.
+        file_glob: true
+        # **NOTE** Explanation on each env variable:
+        # - PROJECT_NAME: Name of the project, set on the `env.global` above.
+        # - TRAVIS_TAG: Tag name that the build is being deployed for, usually the version number.
+        # - TARGET: Target triple of the build.
+        file:
+            - $PROJECT_NAME-$TRAVIS_TAG-$TARGET.*
+            - $PROJECT_NAME*.deb
+        # Don't delete artifacts from previous stage.
+        skip_cleanup: true
+        on:
+            # Deploy only if we push a tag.
+            tags: true
+            # Deploy only on stable channel that has TARGET env variable sets.
+            condition: $TRAVIS_RUST_VERSION = stable && $TARGET != ""

@@ -8,6 +8,7 @@ categories = ["hardware-support"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jasonpeacock/led-bargraph"
 readme = "README.md"
+documentation = "https://docs.rs/led-bargraph"
 
 [dependencies]
 ansi_term     = "0.11.0"
@@ -21,3 +22,9 @@ slog-async    = "2.3.0"
 slog-stdlog   = "3.0.4-pre"
 slog-term     = "2.4.0"
 slog-scope    = "4.0.1"
+
+[badges]
+is-it-maintained-issue-resolution = { repository = "jasonpeacock/led-bargraph" }
+is-it-maintained-open-issues = { repository = "jasonpeacock/led-bargraph" }
+maintenance = { status = "actively-developed" }
+travis-ci = { repository = "jasonpeacock/led-bargraph", branch = "master" }

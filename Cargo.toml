@@ -8,7 +8,7 @@ categories = ["hardware-support"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/jasonpeacock/led-bargraph"
 readme = "README.md"
-documentation = "https://docs.rs/led-bargraph"
+documentation = "https://docs.rs/led_bargraph"
 
 # Don't include CI scripts in the package.
 exclude = ["/ci/*"]

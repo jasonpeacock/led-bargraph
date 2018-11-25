@@ -1,7 +1,7 @@
 # LED Bargraph
 
 [![Version info](https://img.shields.io/crates/v/led-bargraph.svg)](https://crates.io/crates/led-bargraph)
-[![Documentation](https://docs.rs/led-bargraph/badge.svg)](https://docs.rs/led-bargraph)
+[![Documentation](https://docs.rs/led_bargraph/badge.svg)](https://docs.rs/led_bargraph)
 [![Build Status](https://travis-ci.org/jasonpeacock/led-bargraph.svg?branch=master)](https://travis-ci.org/jasonpeacock/led-bargraph)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/jasonpeacock/led-bargraph.svg)](http://isitmaintained.com/project/jasonpeacock/led-bargraph "Average time to resolve an issue")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/jasonpeacock/led-bargraph.svg)](http://isitmaintained.com/project/jasonpeacock/led-bargraph "Percentage of issues still open")

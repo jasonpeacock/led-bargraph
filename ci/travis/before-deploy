@@ -230,6 +230,29 @@ EOF
   return 0
 }
 
+# Function: usage
+#
+# Print the help message and usage example.
+#
+# Returns:
+# 0 for success.
+usage() {
+  cat >&2 <<USAGE
+
+Build a release version of the project and package it as a tarball package, and also
+as a Debian package if the platform is Linux.
+
+Usage:
+  before-deploy <TRAVIS_TEST_RESULT> <TARGET> <PROJECT_NAME> <TRAVIS_TAG>
+
+Options:
+  TRAVIS_TEST_RESULT  0 to proceed, otherwise will exit early.
+  TARGET              The platform triple to build for.
+  PROJECT_NAME        The name of the project to find the binary & name the packages.
+  TRAVIS_TAG          The version (tag) of the package, e.g. "v0.1.0".
+USAGE
+}
+
 #
 # MAIN
 #
@@ -238,14 +261,57 @@ if [[ "${DEBUG_BEFORE_DEPLOY:-false}" == true ]]; then
   set -x
 fi
 
-# shellcheck disable=SC2153
-cargo_build "${TARGET}"
+if [[ $# -ne 4 ]]; then
+  log_error "Incorrect # of args, expected 4 but only [$#]: [$*]"
+  usage
+  exit 1
+fi
+
+declare -r arg_travis_test_result="${1}" && shift
+declare -r arg_target="${1}" && shift
+declare -r arg_project_name="${1}" && shift
+declare -r arg_travis_tag="${1}" && shift
+
+if [[ -z "${arg_travis_test_result}" ]]; then
+  log_error "Argument 'travis_test_result' is empty"
+  usage
+  exit 1
+fi
+
+if [[ -z "${arg_target}" ]]; then
+  log_error "Argument 'target' is empty"
+  usage
+  exit 1
+fi
+
+if [[ -z "${arg_project_name}" ]]; then
+  log_error "Argument 'project_name' is empty"
+  usage
+  exit 1
+fi
+
+if [[ -z "${arg_travis_tag}" ]]; then
+  log_error "Argument 'travis_tag' is empty"
+  usage
+  exit 1
+fi
+
+if [[ "${arg_travis_test_result}" -ne 0 ]]; then
+  log_info "Build failed, not executing pre-deploy commands"
+
+  # Don't want to fail everything (it's probably already failed),
+  # just exit early.
+  exit 0
+fi
 
 # shellcheck disable=SC2153
-create_archive_package "${TARGET}" "${PROJECT_NAME}" "${TRAVIS_TAG}"
+cargo_build "${arg_target}"
 
-if [[ "${TARGET}" == *linux* ]]; then
-  create_debian_package "${TARGET}" "${PROJECT_NAME}" "${TRAVIS_TAG}"
+# shellcheck disable=SC2153
+create_archive_package "${arg_target}" "${arg_project_name}" "${arg_travis_tag}"
+
+if [[ "${arg_target}" == *linux* ]]; then
+  create_debian_package "${arg_target}" "${arg_project_name}" "${arg_travis_tag}"
 fi
 
 exit 0

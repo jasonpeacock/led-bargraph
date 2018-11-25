@@ -46,9 +46,9 @@ matrix:
 addons:
     apt:
         packages:
-            # Needed for i686-unknown-linux-gnu target.
+            # Needed for `i686-unknown-linux-gnu` target (e.g. 32bit support).
             - gcc-multilib
-              # Needed to build deb packages.
+              # Needed to build Debian packages.
             - fakeroot
 
 install:
@@ -61,7 +61,7 @@ script:
     - cargo test --target $TARGET --verbose
 
 before_deploy:
-    - ./ci/before-deploy
+    - ./ci/travis/before-deploy $TRAVIS_TEST_RESULT $TARGET $PROJECT_NAME $TRAVIS_TAG
 
 deploy:
     provider: releases
@@ -72,19 +72,20 @@ deploy:
     # - Paste the output below.
     api_key:
         secure: "o9/2FyTlDBQUQOfLLbSQVix641TFuBXkCEa6OXX09/3U3yMg1SAr85i+KIyzj/6HlkyJnOVodR3qQ+0r+qh1t0TF9h06Z4EBUzs0LGTgd2Gh0muZZ8JDG9Vv/+z6Qk3NnLDdCVmRjXy46+fRo/IXVxQLwbPE/a8WB+b7lIcwY3DXQyP+CNJD5W6pYJw/v/Q20/+ADcNokPaoLlnr/R5vB1BWwcWE6NYiOsID4Qa7Ya9zvbdDFIP8Qbrxi5bt2imfF4MX/TkqrY6VYXC87UQt6oiooMx9lswmxWGVSIJLD2Edz90fGwsgmirNMm/tfzZv/xKUUAai/DBZ5vimH58DCRerg7LJ3V/8s8EARwYh+gAnFncwQVUiNEnXSboUX1Y604tm656NiGORDiOFOmdSEoif8broibTFmPhPquzza2pZA+uGOkEj1X/rN/ksMW6Qt4TbVQ8frhkhHI/oZ8HrLiv8P5iRJOBJoGQvRxG6nRCfSy5UVIAlZUxvn0D4mwmiUDYu0RuIn50cZeDh6vuij2RkL/fBntNQAS0p6xmWyYC441fcCBTBCuiBoSNBYLQyF3qUEHMV1vH1PEoHm5blwjyYn6zME4Te/Ao0Iqj1Z1VIpfKnN0mUzb46Zs9LFLUI7rtBhATLeVISA4wC0b9PStXd5aJNsQcflwkfYAPOGe8="
-        # For uploading multiple files.
-        file_glob: true
-        # **NOTE** Explanation on each env variable:
-        # - PROJECT_NAME: Name of the project, set on the `env.global` above.
-        # - TRAVIS_TAG: Tag name that the build is being deployed for, usually the version number.
-        # - TARGET: Target triple of the build.
-        file:
-            - $PROJECT_NAME-$TRAVIS_TAG-$TARGET.*
-            - $PROJECT_NAME*.deb
-        # Don't delete artifacts from previous stage.
-        skip_cleanup: true
-        on:
-            # Deploy only if we push a tag.
-            tags: true
-            # Deploy only on stable channel that has TARGET env variable sets.
-            condition: $TRAVIS_RUST_VERSION = stable && $TARGET != ""
+    # Upload multiple files.
+    file_glob: true
+    # **NOTE** Explanation on each env variable:
+    # - PROJECT_NAME: Name of the project, set on the `env.global` above.
+    # - TRAVIS_TAG: Tag name that the build is being deployed for, usually the version number.
+    # - TARGET: Target triple of the build.
+    file:
+        - $PROJECT_NAME-$TRAVIS_TAG-$TARGET.*
+        - $PROJECT_NAME*.deb
+    # Don't delete artifacts from previous stage.
+    skip_cleanup: true
+    on:
+        # Deploy only if we push a tag.
+        tags: true
+        # Deploy only on stable channel that has TARGET env variable sets.
+        condition: $TRAVIS_RUST_VERSION = stable && $TARGET != ""
+    all_branches: true

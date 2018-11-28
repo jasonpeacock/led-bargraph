@@ -49,21 +49,7 @@ Make sure that you use Rust 1.24 or higher.
 
 Download the corresponding archive from the [Releases](https://github.com/jasonpeacock/led-bargraph/releases) page.
 
-# Todo
-
-* Support configuring defaults & behavior via TOML.
-* Built-in daemonizing (update itself using a given command, forever).
-* Reverse bargraph direction on LEDs.
-* Unit tests.
-* Documentation.
-* Useful logging in libraries.
-* Review [API Guidelines Checklist](https://rust-lang-nursery.github.io/api-guidelines/checklist.html)
-* Refactor `HT16K33` to use an interface.
 * `HT16K33` should initialize itself before being passed to `Bargraph`, and `Bargraph` just verifies that it's usable.
-
-# In Progress
-
-* Add `--show` option for virtual display on the command-line.
 
 ## Supported Rust Versions
 

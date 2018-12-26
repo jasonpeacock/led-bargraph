@@ -12,8 +12,18 @@ extern crate slog_async;
 extern crate slog_term;
 
 use docopt::Docopt;
+
+#[cfg(not(target_os = "linux"))]
+use ht16k33::i2c_mock::I2cMock;
+
 use led_bargraph::Bargraph;
 use slog::Drain;
+
+// The `linux_embedded_hal` only compiles on linux.
+#[cfg(target_os = "linux")]
+extern crate linux_embedded_hal;
+#[cfg(target_os = "linux")]
+use linux_embedded_hal::I2cdev;
 
 use std::result;
 use std::sync::atomic::Ordering;
@@ -24,6 +34,7 @@ struct RuntimeLevelFilter<D> {
     drain: D,
     debug: Arc<atomic::AtomicBool>,
     trace: Arc<atomic::AtomicBool>,
+    verbose: Arc<atomic::AtomicBool>,
 }
 
 impl<D> Drain for RuntimeLevelFilter<D>
@@ -42,8 +53,10 @@ where
             slog::Level::Trace
         } else if self.debug.load(Ordering::Relaxed) {
             slog::Level::Debug
-        } else {
+        } else if self.verbose.load(Ordering::Relaxed) {
             slog::Level::Info
+        } else {
+            slog::Level::Warning
         };
 
         if record.level().is_at_least(current_level) {
@@ -54,22 +67,6 @@ where
     }
 }
 
-// The Linux I2cdevice only works on linux, use a mock
-// object to support compilation & testing on other
-// platforms (e.g. OSX).
-//
-// Linux
-#[cfg(target_os = "linux")]
-extern crate linux_embedded_hal;
-#[cfg(target_os = "linux")]
-use linux_embedded_hal::I2cdev;
-//
-// Not Linux
-//
-// Use the `I2cMock` provided by `ht16k33`.
-#[cfg(not(target_os = "linux"))]
-use ht16k33::i2c_mock::I2cMock;
-
 // Docopts: https://github.com/docopt/docopt.rs
 const USAGE: &str = "
 LED Bargraph.
@@ -78,7 +75,6 @@ Usage:
     led-bargraph [options] clear
     led-bargraph [options] set <value> <range>
     led-bargraph [options] show
-    led-bargraph (-h | --help)
 
 Commands:
     clear   Clear the display.
@@ -90,13 +86,15 @@ Arguments:
     range   The range of the bar graph to display.
 
 Options:
-    -h, --help              Print this help.
-    -d, --debug             Enable verbose debug logging.
-    --trace                 Enable extra-verbose trace logging.
-    --as-is                 Assume device is already initialized.
-    --show                  Show on-screen the current bargraph display.
-    --i2c-path=<path>       Path to the I2C device [default: /dev/i2c-1].
+    --no-init               Do not initialize the device.
+    --trace                 Enable verbose debug logging.
+    -d, --debug             Enable debug logging.
+    -v, --verbose           Enable verbose logging.
+    -s, --show              Show on-screen the current bargraph display.
+    --i2c-mock              Mock the I2C interface, useful when no device is available.
     --i2c-address=<N>       Address of the I2C device, in decimal [default: 112].
+    --i2c-path=<path>       Path to the I2C device [default: /dev/i2c-1].
+    -h, --help              Print this help.
 ";
 
 #[derive(Debug, Deserialize)]
@@ -108,8 +106,10 @@ struct Args {
     arg_range: u8,
     flag_debug: bool,
     flag_trace: bool,
-    flag_as_is: bool,
+    flag_verbose: bool,
+    flag_no_init: bool,
     flag_show: bool,
+    flag_i2c_mock: bool,
     flag_i2c_path: String,
     flag_i2c_address: u8,
 }
@@ -117,6 +117,7 @@ struct Args {
 fn main() {
     let debug = Arc::new(atomic::AtomicBool::new(false));
     let trace = Arc::new(atomic::AtomicBool::new(false));
+    let verbose = Arc::new(atomic::AtomicBool::new(false));
 
     // Setup logging for the terminal (e.g. STDERR).
     let decorator = slog_term::TermDecorator::new().build();
@@ -125,6 +126,7 @@ fn main() {
         drain,
         debug: debug.clone(),
         trace: trace.clone(),
+        verbose: verbose.clone(),
     }
     .fuse();
     let drain = slog_async::Async::new(drain)
@@ -143,35 +145,33 @@ fn main() {
     // then log level will be trace.
     debug.store(args.flag_debug, Ordering::Relaxed);
     trace.store(args.flag_trace, Ordering::Relaxed);
+    verbose.store(args.flag_verbose, Ordering::Relaxed);
 
     debug!(logger, "{:?}", args);
 
-    // The Linux I2cdevice only works on linux, use a mock object to support compilation & testing.
-    //
-    // Linux
+    #[cfg(not(target_os = "linux"))]
+    info!(logger, "Instantiating mock I2C device");
+    #[cfg(not(target_os = "linux"))]
+    let mock_logger = logger.new(o!("mod" => "HT16K33::i2c_mock"));
+    #[cfg(not(target_os = "linux"))]
+    let i2c_device = I2cMock::new(mock_logger);
+
+    #[cfg(target_os = "linux")]
+    info!(logger, "Instantiating linux I2C device");
     #[cfg(target_os = "linux")]
     let mut i2c_device = I2cdev::new(args.flag_i2c_path).unwrap();
     #[cfg(target_os = "linux")]
     i2c_device
         .set_slave_address(args.flag_i2c_address as u16)
         .unwrap();
-    //
-    // Not Linux
-    #[cfg(not(target_os = "linux"))]
-    let mock_logger = logger.new(o!("mod" => "HT16K33::i2c_mock"));
-    #[cfg(not(target_os = "linux"))]
-    let i2c_device = I2cMock::new(mock_logger);
 
     let bargraph_logger = logger.new(o!("mod" => "bargraph"));
-    let mut bargraph = Bargraph::new(
-        i2c_device,
-        args.flag_i2c_address,
-        args.flag_show,
-        bargraph_logger,
-    );
+    let mut bargraph = Bargraph::new(i2c_device, args.flag_i2c_address, bargraph_logger);
 
-    if args.flag_as_is {
+    if args.flag_no_init {
         info!(logger, "Not initializing the display");
+    } else {
+        info!(logger, "Initializing the display");
         bargraph
             .initialize()
             .expect("Failed to initialize the display");
@@ -187,7 +187,7 @@ fn main() {
               "value" => args.arg_value, "range" => args.arg_range);
 
         bargraph
-            .update(args.arg_value, args.arg_range)
+            .update(args.arg_value, args.arg_range, args.flag_show)
             .expect("Failed to set a value within a range on the display");
     }
 

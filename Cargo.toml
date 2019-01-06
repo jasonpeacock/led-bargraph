@@ -1,6 +1,6 @@
 [package]
 name    = "led_bargraph"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Jason Peacock <jason@jasonpeacock.com>"]
 description = "A Rust library & application for the Adafruit Bi-Color (Red/Green) 24-Bar Bargraph w/I2C Backpack Kit."
 keywords = ["led", "driver", "display", "embedded-hal"]
@@ -17,7 +17,7 @@ exclude = ["/ci/*"]
 ansi_term     = "0.11.0"
 docopt        = "1.0.2"
 embedded-hal  = "0.2.2"
-ht16k33       = "0.2.0"
+ht16k33       = "0.3.0"
 num-integer   = "0.1.39"
 serde         = "1.0.80"
 serde_derive  = "1.0.80"

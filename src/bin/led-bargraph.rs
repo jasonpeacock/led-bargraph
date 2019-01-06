@@ -75,6 +75,7 @@ Usage:
     led-bargraph [options] clear
     led-bargraph [options] set <value> <range>
     led-bargraph [options] show
+    led-bargraph --help
 
 Commands:
     clear   Clear the display.

@@ -14,52 +14,35 @@ A Rust library & application for the [Adafruit Bi-Color (Red/Green) 24-Bar Bargr
 LED Bargraph.
 
 Usage:
-    led-bargraph clear
-    led-bargraph set <value> <range>
-    led-bargraph (-h | --help)
+    led-bargraph [options] clear
+    led-bargraph [options] set <value> <range>
+    led-bargraph [options] show
 
 Commands:
     clear   Clear the display.
     set     Display the value against the range.
+    show    Show on-screen the current bargraph display.
 
 Arguments:
     value   The value to display.
     range   The range of the bar graph to display.
 
 Options:
-    -h --help               Show this screen.
-    --i2c-path=<path>       Path to the I2C device [default: /dev/i2c-1].
+    --no-init               Do not initialize the device.
+    --trace                 Enable verbose debug logging.
+    -d, --debug             Enable debug logging.
+    -v, --verbose           Enable verbose logging.
+    -s, --show              Show on-screen the current bargraph display.
+    --i2c-mock              Mock the I2C interface, useful when no device is available.
     --i2c-address=<N>       Address of the I2C device, in decimal [default: 112].
-    --bargraph-size=<N>     Size of the bargraph [default: 24].
+    --i2c-path=<path>       Path to the I2C device [default: /dev/i2c-1].
+    -h, --help              Print this help.
 ```
-
-# Installation
-
-### With cargo (Linux, OSX, Windows)
-
-`led-bargraph` can be installed via [cargo](https://doc.rust-lang.org/cargo/):
-
-```
-cargo install led-bargraph
-```
-
-Make sure that you use Rust 1.24 or higher.
-
-### From binaries (Linux, OSX, Windows)
-
-Download the corresponding archive from the [Releases](https://github.com/jasonpeacock/led-bargraph/releases) page.
-
-* `HT16K33` should initialize itself before being passed to `Bargraph`, and `Bargraph` just verifies that it's usable.
-
-## Supported Rust Versions
-
-See the top of the [Travis configuration file](.travis.yml) for the oldest, and other, supported Rust versions.
 
 ## Supported Platforms
 
 * Linux
     * 32 & 64bit
-    * gnu & musl
 * OSX
     * 64bit
 
